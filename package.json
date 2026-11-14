@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "description": "DSAURA - Measurable DSA Pattern Mastery & Intelligence Platform",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "build": "npm run build --prefix frontend",
-    "dev": "npm run dev --prefix frontend",
-    "lint": "npm run lint --prefix frontend",
-    "preview": "npm run preview --prefix frontend"
-  },
-  "devDependencies": {}
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "npm run dev --workspace=frontend",
+    "lint": "npm run lint --workspace=frontend",
+    "preview": "npm run preview --workspace=frontend"
+  }
 }

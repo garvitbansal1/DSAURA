@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root { --brand: #6272f1; }
+  body {
+    @apply bg-surface text-white antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  * { @apply border-surface-border; }
+  ::-webkit-scrollbar { @apply w-1.5; }
+  ::-webkit-scrollbar-track { @apply bg-surface; }
+  ::-webkit-scrollbar-thumb { @apply bg-surface-border rounded-full; }
+}
+
+@layer components {
+  .card { @apply bg-surface-card border border-surface-border rounded-xl p-5; }
+  .btn-primary { @apply bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-ghost { @apply hover:bg-surface-hover text-gray-300 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors; }
+  .input { @apply bg-surface border border-surface-border text-white placeholder-gray-500 rounded-lg px-4 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all; }
+  .label { @apply text-sm font-medium text-gray-300 mb-1.5 block; }
+  .mastery-beginner { @apply text-red-400 bg-red-400/10 border-red-400/20; }
+  .mastery-developing { @apply text-orange-400 bg-orange-400/10 border-orange-400/20; }
+  .mastery-intermediate { @apply text-yellow-400 bg-yellow-400/10 border-yellow-400/20; }
+  .mastery-strong { @apply text-green-400 bg-green-400/10 border-green-400/20; }
+  .mastery-advanced { @apply text-brand-400 bg-brand-400/10 border-brand-400/20; }
+}

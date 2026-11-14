@@ -52,7 +52,11 @@ export function Register() {
       toast.success(`Welcome to DSAURA, ${data.user.name}!`);
       navigate('/dashboard');
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || 'Registration failed. Please try again.');
+      if (err?.response?.status === 404 || err?.code === 'ERR_NETWORK') {
+        toast.error('API server unreachable. Ensure backend is deployed or check connection.');
+      } else {
+        toast.error(err?.response?.data?.detail || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

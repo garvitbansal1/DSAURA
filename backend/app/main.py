@@ -45,3 +45,35 @@ app.include_router(activity.router, prefix="/api/v1/activity", tags=["Activity &
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "service": "dsaura-api", "version": "1.0.0"}
+
+
+@app.on_event("startup")
+def init_db():
+    try:
+        from app.database import engine, Base, SessionLocal
+        from app.models.user import User
+        from app.utils.security import hash_password
+        from app.knowledge_base.seed_data import seed_database
+        from app.routers.mastery import ensure_user_problem_history
+        import uuid
+
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        try:
+            seed_database(db)
+            test_user = db.query(User).filter(User.email == "test@dsaura.dev").first()
+            if not test_user:
+                test_user = User(
+                    id=uuid.uuid4(),
+                    name="Test Architect",
+                    email="test@dsaura.dev",
+                    password_hash=hash_password("Password123!"),
+                )
+                db.add(test_user)
+                db.commit()
+                db.refresh(test_user)
+            ensure_user_problem_history(test_user.id, db)
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Startup DB init info: {e}")

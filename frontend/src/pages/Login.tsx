@@ -23,7 +23,11 @@ export function Login() {
       toast.success(`Welcome back, ${data.user.name}!`);
       navigate('/dashboard');
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || 'Invalid email or password');
+      if (err?.response?.status === 404 || err?.code === 'ERR_NETWORK') {
+        toast.error('API server unreachable. Ensure backend is deployed or check connection.');
+      } else {
+        toast.error(err?.response?.data?.detail || 'Invalid email or password');
+      }
     } finally {
       setLoading(false);
     }

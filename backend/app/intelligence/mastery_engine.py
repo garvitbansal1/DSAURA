@@ -48,10 +48,10 @@ class ProblemRecord:
     topics: List[str]  # topic slugs
     status: str  # solved, attempted, needs_revision
     solving_mode: str  # independent, hints, editorial, assisted, re_solved, unknown
-    self_reported: bool
-    attempts: int
-    first_solved_at: Optional[datetime]
-    last_attempted_at: Optional[datetime]
+    self_reported: bool = False
+    attempts: int = 1
+    first_solved_at: Optional[datetime] = None
+    last_attempted_at: Optional[datetime] = None
 
 
 @dataclass

@@ -7,4 +7,5 @@ export const profilesAPI = {
   delete: (id: string) => apiClient.delete(`/profiles/${id}`),
   sync: (id: string) => apiClient.post(`/profiles/${id}/sync`),
   syncHistory: (id: string) => apiClient.get(`/profiles/${id}/sync-history`),
+  getCrossPlatformStats: () => apiClient.get('/profiles/cross-platform-stats'),
 };

@@ -227,8 +227,8 @@ def seed_database(db: Session) -> dict:
 
 
 if __name__ == "__main__":
-    from app.database import SessionLocal, engine
-    from app.models import Base
+    from app.database import SessionLocal, engine, Base
+    import app.models
 
     # Create all tables
     Base.metadata.create_all(bind=engine)

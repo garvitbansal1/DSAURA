@@ -1,0 +1,13 @@
+{
+  "name": "dsaura",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DSAURA - Measurable DSA Pattern Mastery & Intelligence Platform",
+  "scripts": {
+    "build": "npm run build --prefix frontend",
+    "dev": "npm run dev --prefix frontend",
+    "lint": "npm run lint --prefix frontend",
+    "preview": "npm run preview --prefix frontend"
+  },
+  "devDependencies": {}
+}

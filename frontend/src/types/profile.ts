@@ -7,7 +7,7 @@ export interface CodingProfile {
   is_verified: boolean;
   last_synced_at?: string;
   sync_status: 'never' | 'pending' | 'syncing' | 'success' | 'failed';
-  raw_stats?: Record<string, unknown>;
+  raw_stats?: Record<string, any>;
   created_at: string;
 }
 

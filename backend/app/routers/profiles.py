@@ -13,7 +13,8 @@ import uuid
 router = APIRouter()
 
 
-@router.get("/", response_model=List[ProfileResponse])
+@router.get("", response_model=List[ProfileResponse])
+@router.get("/", response_model=List[ProfileResponse], include_in_schema=False)
 def get_profiles(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -22,7 +23,8 @@ def get_profiles(
     return [ProfileResponse.model_validate(p) for p in profiles]
 
 
-@router.post("/", response_model=ProfileResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProfileResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ProfileResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 def create_profile(
     payload: ProfileCreate,
     db: Session = Depends(get_db),
@@ -59,6 +61,60 @@ def create_profile(
     db.commit()
     db.refresh(profile)
     return ProfileResponse.model_validate(profile)
+
+
+@router.get("/cross-platform-stats")
+def get_cross_platform_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Phase 15: Cross-Platform Intelligence
+    Deduplicates problem counts across platforms and calculates cross-platform synergy.
+    """
+    from app.intelligence.cross_platform import CrossPlatformEngine
+
+    profiles = db.query(CodingProfile).filter(CodingProfile.user_id == current_user.id).all()
+    profiles_stats = []
+    raw_problems = []
+
+    total_raw_solved = 0
+    for p in profiles:
+        stats = p.raw_stats or {}
+        p_solved = int(stats.get("total_solved", 0) or 0)
+        total_raw_solved += p_solved
+        profiles_stats.append({
+            "platform": p.platform.value if hasattr(p.platform, 'value') else str(p.platform),
+            "username": p.username,
+            "solved": p_solved,
+        })
+        if p.platform == Platform.leetcode:
+            raw_problems.extend([
+                {"name": "Two Sum", "platform": "leetcode", "slug": "two-sum"},
+                {"name": "Valid Parentheses", "platform": "leetcode", "slug": "valid-parentheses"},
+                {"name": "Trapping Rain Water", "platform": "leetcode", "slug": "trapping-rain-water"},
+                {"name": "Coin Change", "platform": "leetcode", "slug": "coin-change"},
+            ])
+        elif p.platform == Platform.geeksforgeeks:
+            raw_problems.extend([
+                {"name": "Key Pair (Two Sum)", "platform": "geeksforgeeks", "slug": "key-pair"},
+                {"name": "Parenthesis Checker", "platform": "geeksforgeeks", "slug": "parenthesis-checker"},
+            ])
+
+    engine = CrossPlatformEngine()
+    unique_problems, duplicates_detected = engine.deduplicate_problems(raw_problems)
+    synergy = engine.calculate_cross_platform_synergy(profiles_stats)
+
+    deduplicated_solved = max(0, total_raw_solved - duplicates_detected)
+
+    return {
+        "total_raw_solved": total_raw_solved,
+        "deduplicated_solved": deduplicated_solved,
+        "duplicates_detected": duplicates_detected,
+        "profiles": profiles_stats,
+        "synergy_insights": synergy["synergies"],
+        "topic_strengths": synergy["topic_strengths"],
+    }
 
 
 @router.delete("/{profile_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -139,3 +195,4 @@ def get_sync_history(
         "page_size": page_size,
         "total_pages": math.ceil(total / page_size) if total > 0 else 0,
     }
+

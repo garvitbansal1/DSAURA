@@ -12,13 +12,23 @@ interface AuthState {
   updateUser: (user: Partial<User>) => void;
 }
 
+const getStoredToken = () => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('dsaura_access_token');
+};
+
+const getStoredRefreshToken = () => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('dsaura_refresh_token');
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      accessToken: null,
-      refreshToken: null,
-      isAuthenticated: false,
+      accessToken: getStoredToken(),
+      refreshToken: getStoredRefreshToken(),
+      isAuthenticated: Boolean(getStoredToken()),
       setAuth: (user, accessToken, refreshToken) => {
         localStorage.setItem('dsaura_access_token', accessToken);
         localStorage.setItem('dsaura_refresh_token', refreshToken);

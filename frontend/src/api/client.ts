@@ -10,8 +10,14 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('dsaura_access_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('dsaura_access_token') : null;
+  if (token) {
+    if (config.headers && typeof (config.headers as any).set === 'function') {
+      (config.headers as any).set('Authorization', `Bearer ${token}`);
+    } else {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
   return config;
 });
 
@@ -19,9 +25,14 @@ apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('dsaura_access_token');
-      localStorage.removeItem('dsaura_refresh_token');
-      window.location.href = '/login';
+      if (typeof window !== 'undefined') {
+        const path = window.location.pathname;
+        if (path !== '/login' && path !== '/register' && path !== '/') {
+          localStorage.removeItem('dsaura_access_token');
+          localStorage.removeItem('dsaura_refresh_token');
+          window.location.href = '/login';
+        }
+      }
     }
     return Promise.reject(error);
   }

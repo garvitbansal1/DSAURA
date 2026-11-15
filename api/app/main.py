@@ -82,6 +82,7 @@ def init_db():
         from app.routers.mastery import ensure_user_problem_history
         import uuid
 
+        DEFAULT_TEST_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
         Base.metadata.create_all(bind=engine)
         db = SessionLocal()
         try:
@@ -89,7 +90,7 @@ def init_db():
             test_user = db.query(User).filter(User.email == "test@dsaura.dev").first()
             if not test_user:
                 test_user = User(
-                    id=uuid.uuid4(),
+                    id=DEFAULT_TEST_USER_ID,
                     name="Test Architect",
                     email="test@dsaura.dev",
                     password_hash=hash_password("Password123!"),

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -10,8 +10,16 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('dsaura_access_token') : null;
+    if (isAuthenticated || token) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

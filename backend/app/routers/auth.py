@@ -60,7 +60,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    token_data = {"sub": str(new_user.id)}
+    token_data = {"sub": str(new_user.id), "email": new_user.email, "name": new_user.name}
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
 
@@ -82,7 +82,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
 
-    token_data = {"sub": str(user.id)}
+    token_data = {"sub": str(user.id), "email": user.email, "name": user.name}
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
 
@@ -108,7 +108,7 @@ def refresh_token(payload: RefreshRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-    token_data = {"sub": str(user.id)}
+    token_data = {"sub": str(user.id), "email": user.email, "name": user.name}
     access_token = create_access_token(token_data)
     new_refresh_token = create_refresh_token(token_data)
 

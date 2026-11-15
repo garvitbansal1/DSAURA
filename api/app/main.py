@@ -31,9 +31,11 @@ app.add_middleware(
 
 @app.middleware("http")
 async def fix_vercel_path(request, call_next):
-    matched_path = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri")
-    if matched_path and request.scope.get("path") in ["/api/index.py", "/api", "/index.py"]:
-        request.scope["path"] = matched_path
+    raw_target = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri")
+    if raw_target:
+        clean_path = raw_target.split("?")[0]
+        if request.scope.get("path") in ["/api/index.py", "/api", "/api/", "/index.py", "/"]:
+            request.scope["path"] = clean_path
     return await call_next(request)
 
 

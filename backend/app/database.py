@@ -21,7 +21,7 @@ elif db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 is_sqlite = db_url.startswith("sqlite")
-connect_args = {"check_same_thread": False} if is_sqlite else {}
+connect_args = {"check_same_thread": False} if is_sqlite else {"connect_timeout": 3}
 engine_kwargs = {"pool_pre_ping": True}
 if not is_sqlite:
     engine_kwargs.update({"pool_size": 10, "max_overflow": 20})
@@ -32,10 +32,14 @@ try:
         connect_args=connect_args,
         **engine_kwargs
     )
+    if not is_sqlite:
+        with engine.connect() as conn:
+            pass
 except Exception as e:
-    logger.warning(f"Failed to initialize database {db_url}: {e}. Falling back to SQLite.")
-    db_url = "sqlite:////tmp/dsaura.db"
-    engine = create_engine("sqlite:////tmp/dsaura.db", connect_args={"check_same_thread": False})
+    logger.warning(f"Failed to connect to database {db_url}: {e}. Falling back to SQLite.")
+    fallback_path = "/tmp/dsaura.db" if is_vercel else "dsaura_fallback.db"
+    db_url = f"sqlite:///{fallback_path}"
+    engine = create_engine(db_url, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

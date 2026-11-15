@@ -28,26 +28,49 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
-app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
-app.include_router(profiles.router, prefix="/api/v1/profiles", tags=["Profiles"])
-app.include_router(topics.router, prefix="/api/v1/topics", tags=["Topics"])
-app.include_router(patterns.router, prefix="/api/v1/patterns", tags=["Patterns"])
-app.include_router(knowledge_graph.router, prefix="/api/v1/knowledge-graph", tags=["Knowledge Graph"])
-app.include_router(recommendations.router, prefix="/api/v1/recommendations", tags=["Recommendations"])
-app.include_router(mastery.router, prefix="/api/v1/mastery", tags=["Mastery"])
-app.include_router(assessments.router, prefix="/api/v1/assessments", tags=["Assessments"])
-app.include_router(revision.router, prefix="/api/v1/revision", tags=["Revision"])
-app.include_router(gaps.router, prefix="/api/v1/gaps", tags=["Gaps & Reality Check"])
-app.include_router(activity.router, prefix="/api/v1/activity", tags=["Activity & Dashboard"])
+
+@app.middleware("http")
+async def fix_vercel_path(request, call_next):
+    matched_path = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri")
+    if matched_path and request.scope.get("path") in ["/api/index.py", "/api", "/index.py"]:
+        request.scope["path"] = matched_path
+    return await call_next(request)
+
+
+# Include all routers under both /api/v1 and /v1 for Vercel path compatibility
+ROUTERS = [
+    (auth.router, "/auth", ["Authentication"]),
+    (users.router, "/users", ["Users"]),
+    (profiles.router, "/profiles", ["Profiles"]),
+    (topics.router, "/topics", ["Topics"]),
+    (patterns.router, "/patterns", ["Patterns"]),
+    (knowledge_graph.router, "/knowledge-graph", ["Knowledge Graph"]),
+    (recommendations.router, "/recommendations", ["Recommendations"]),
+    (mastery.router, "/mastery", ["Mastery"]),
+    (assessments.router, "/assessments", ["Assessments"]),
+    (revision.router, "/revision", ["Revision"]),
+    (gaps.router, "/gaps", ["Gaps & Reality Check"]),
+    (activity.router, "/activity", ["Activity & Dashboard"]),
+]
+
+for router_obj, path_prefix, tags in ROUTERS:
+    app.include_router(router_obj, prefix=f"/api/v1{path_prefix}", tags=tags)
+    app.include_router(router_obj, prefix=f"/v1{path_prefix}", tags=tags, include_in_schema=False)
 
 
 @app.get("/api/health")
+@app.get("/health")
+@app.get("/api")
+@app.get("/")
 def health_check():
-    return {"status": "ok", "service": "dsaura-api", "version": "1.0.0"}
+    return {
+        "status": "ok",
+        "service": "dsaura-api",
+        "version": "1.0.0",
+        "message": "DSAURA Intelligence Engine is running"
+    }
 
 
-@app.on_event("startup")
 def init_db():
     try:
         from app.database import engine, Base, SessionLocal
@@ -77,3 +100,15 @@ def init_db():
             db.close()
     except Exception as e:
         print(f"Startup DB init info: {e}")
+
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
+
+# Initialize database on module load so it works even in serverless environments where lifespan events are skipped
+try:
+    init_db()
+except Exception:
+    pass

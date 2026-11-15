@@ -100,7 +100,11 @@ def refresh_token(payload: RefreshRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
     user_id = token_payload.get("sub")
-    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    try:
+        uid = uuid.UUID(str(user_id))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token identity")
+    user = db.query(User).filter(User.id == uid, User.is_active == True).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 

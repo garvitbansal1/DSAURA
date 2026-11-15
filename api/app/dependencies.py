@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -10,12 +11,26 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
+def _to_uuid(val: any) -> Optional[uuid.UUID]:
+    if isinstance(val, uuid.UUID):
+        return val
+    try:
+        return uuid.UUID(str(val))
+    except (ValueError, TypeError):
+        return None
+
+
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
     payload = decode_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    
+    uid = _to_uuid(user_id)
+    if not uid:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token identity")
+        
+    user = db.query(User).filter(User.id == uid, User.is_active == True).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
     return user
@@ -29,6 +44,9 @@ def get_current_user_optional(token: Optional[str] = Depends(oauth2_scheme_optio
         user_id = payload.get("sub")
         if not user_id:
             return None
-        return db.query(User).filter(User.id == user_id, User.is_active == True).first()
+        uid = _to_uuid(user_id)
+        if not uid:
+            return None
+        return db.query(User).filter(User.id == uid, User.is_active == True).first()
     except Exception:
         return None

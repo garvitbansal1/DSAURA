@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, date
 from sqlalchemy import Column, Float, String, Date, DateTime, ForeignKey, Integer, JSON
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Uuid as UUID
 from sqlalchemy.orm import relationship
 from app.database import Base
 

@@ -23,7 +23,7 @@ def is_socket_reachable(host: str, port: int, timeout: float = 0.2) -> bool:
 
 # In Vercel serverless environment without a remote DB configured, use SQLite in /tmp
 if is_vercel and ("localhost" in db_url or "127.0.0.1" in db_url):
-    db_url = "sqlite:////tmp/dsaura.db"
+    db_url = "sqlite:////tmp/dsaura_v3.db"
 elif "localhost" in db_url or "127.0.0.1" in db_url:
     # Fast check if local Postgres port 5432 is open before attempting psycopg2
     try:
@@ -59,7 +59,7 @@ try:
             pass
 except Exception as e:
     logger.warning(f"Failed to connect to database {db_url}: {e}. Falling back to SQLite.")
-    fallback_path = "/tmp/dsaura.db" if is_vercel else "dsaura_fallback.db"
+    fallback_path = "/tmp/dsaura_v3.db" if is_vercel else "dsaura_fallback.db"
     db_url = f"sqlite:///{fallback_path}"
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
 

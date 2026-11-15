@@ -1,4 +1,6 @@
 import asyncio
+import uuid
+from typing import Any, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
@@ -17,10 +19,20 @@ INTEGRATION_MAP = {
 }
 
 
-async def run_sync(profile_id: str, db: Session):
-    profile = db.query(CodingProfile).filter(CodingProfile.id == profile_id).first()
+def _to_uuid(val: Any) -> Any:
+    if isinstance(val, uuid.UUID):
+        return val
+    try:
+        return uuid.UUID(str(val))
+    except Exception:
+        return val
+
+
+async def run_sync(profile_id: Any, db: Session) -> Optional[CodingProfile]:
+    p_uuid = _to_uuid(profile_id)
+    profile = db.query(CodingProfile).filter(CodingProfile.id == p_uuid).first()
     if not profile:
-        return
+        return None
 
     sync_record = SyncRecord(profile_id=profile.id, status="running", started_at=datetime.utcnow())
     db.add(sync_record)
@@ -37,8 +49,17 @@ async def run_sync(profile_id: str, db: Session):
         profile.raw_stats = stats
         profile.last_synced_at = datetime.utcnow()
         profile.sync_status = SyncStatus.success
+        profile.is_verified = True
         sync_record.status = "success"
-        sync_record.problems_fetched = stats.get("total_solved", 0)
+        sync_record.problems_fetched = int(stats.get("total_solved", 0) or 0)
+
+        # Populate user problem history to drive topic intelligence & mastery engine
+        try:
+            from app.routers.mastery import ensure_user_problem_history
+            ensure_user_problem_history(profile.user_id, db)
+        except Exception:
+            pass
+
     except Exception as e:
         profile.sync_status = SyncStatus.failed
         sync_record.status = "failed"
@@ -46,6 +67,9 @@ async def run_sync(profile_id: str, db: Session):
     finally:
         sync_record.completed_at = datetime.utcnow()
         db.commit()
+        db.refresh(profile)
+
+    return profile
 
 
 def run_sync_background(profile_id: str):

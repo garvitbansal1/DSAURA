@@ -205,11 +205,11 @@ export function TopicIntelligence() {
                   {/* 5-Dimension Visual Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pt-2">
                     {[
-                      { name: 'Pattern Coverage', weight: '30%', score: topic.score_breakdown.pattern_coverage || 0 },
-                      { name: 'Independent Solving', weight: '25%', score: topic.score_breakdown.independent_solving || 0 },
-                      { name: 'Difficulty Progression', weight: '20%', score: topic.score_breakdown.difficulty_progression || 0 },
-                      { name: 'Problem Diversity', weight: '15%', score: topic.score_breakdown.problem_diversity || 0 },
-                      { name: 'Revision Retention', weight: '10%', score: topic.score_breakdown.revision_retention || 0 },
+                      { name: 'Pattern Coverage', weight: '30%', score: topic.score_breakdown?.pattern_coverage ?? 0 },
+                      { name: 'Independent Solving', weight: '25%', score: topic.score_breakdown?.independent_solving ?? 0 },
+                      { name: 'Difficulty Progression', weight: '20%', score: topic.score_breakdown?.difficulty_progression ?? 0 },
+                      { name: 'Problem Diversity', weight: '15%', score: topic.score_breakdown?.problem_diversity ?? 0 },
+                      { name: 'Revision Retention', weight: '10%', score: topic.score_breakdown?.revision_retention ?? 0 },
                     ].map((dim) => (
                       <div
                         key={dim.name}

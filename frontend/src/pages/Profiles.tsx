@@ -7,7 +7,7 @@ import type { CodingProfile, ProfileCreate } from '../types/profile';
 const PLATFORMS = [
   { value: 'leetcode', label: 'LeetCode', url: 'https://leetcode.com/u/{username}', hint: 'Enter your LeetCode username' },
   { value: 'codeforces', label: 'Codeforces', url: 'https://codeforces.com/profile/{username}', hint: 'Enter your Codeforces handle' },
-  { value: 'geeksforgeeks', label: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/user/{username}', hint: 'Note: GFG uses CSV import only' },
+  { value: 'geeksforgeeks', label: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/user/{username}', hint: 'Enter your GeeksforGeeks username' },
   { value: 'hackerrank', label: 'HackerRank', url: 'https://www.hackerrank.com/{username}', hint: 'Enter your HackerRank username' },
 ];
 
@@ -70,7 +70,17 @@ export function Profiles() {
       setProfiles((p) => [...p, data]);
       setShowForm(false);
       setForm({ platform: 'leetcode', username: '', profile_url: '' });
-      toast.success(`${form.platform} profile connected!`);
+      toast.success(`${form.platform} profile connected! Synchronizing...`);
+      try {
+        const syncRes = await profilesAPI.sync(data.id);
+        if (syncRes.data) {
+          setProfiles((p) => p.map((pr) => pr.id === data.id ? { ...pr, ...syncRes.data } : pr));
+        }
+        await loadProfiles();
+        toast.success(`${form.platform} profile synchronized!`);
+      } catch {
+        // sync non-blocking during connect
+      }
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Failed to connect profile');
     } finally {
@@ -81,10 +91,12 @@ export function Profiles() {
   const handleSync = async (id: string) => {
     setSyncing(id);
     try {
-      await profilesAPI.sync(id);
-      toast.success('Sync started! This may take a moment.');
-      // Poll for update
-      setTimeout(() => loadProfiles(), 3000);
+      const syncRes = await profilesAPI.sync(id);
+      if (syncRes.data) {
+        setProfiles((p) => p.map((pr) => pr.id === id ? { ...pr, ...syncRes.data } : pr));
+      }
+      await loadProfiles();
+      toast.success('Profile synced successfully!');
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Sync failed');
     } finally {
@@ -261,9 +273,32 @@ export function Profiles() {
                       </div>
                     ))}
                     {p.platform === 'codeforces' && [
+                      { label: 'Total Solved', val: String(stats.total_solved ?? '') },
                       { label: 'Rating', val: String(stats.rating ?? '') },
                       { label: 'Max Rating', val: String(stats.max_rating ?? '') },
                       { label: 'Rank', val: String(stats.rank ?? '') },
+                    ].filter(x => x.val !== '').map(({ label, val }) => (
+                      <div key={label} className="bg-[#0f0f1a] rounded-lg px-3 py-2">
+                        <div className="text-white font-semibold text-sm">{val}</div>
+                        <div className="text-gray-500 text-xs">{label}</div>
+                      </div>
+                    ))}
+                    {p.platform === 'geeksforgeeks' && [
+                      { label: 'Total Solved', val: String(stats.total_solved ?? '') },
+                      { label: 'Easy', val: String(stats.easy_solved ?? '') },
+                      { label: 'Medium', val: String(stats.medium_solved ?? '') },
+                      { label: 'Score', val: String(stats.coding_score ?? '') },
+                    ].filter(x => x.val !== '').map(({ label, val }) => (
+                      <div key={label} className="bg-[#0f0f1a] rounded-lg px-3 py-2">
+                        <div className="text-white font-semibold text-sm">{val}</div>
+                        <div className="text-gray-500 text-xs">{label}</div>
+                      </div>
+                    ))}
+                    {p.platform === 'hackerrank' && [
+                      { label: 'Total Solved', val: String(stats.total_solved ?? '') },
+                      { label: 'Easy', val: String(stats.easy_solved ?? '') },
+                      { label: 'Medium', val: String(stats.medium_solved ?? '') },
+                      { label: 'Badges', val: String(stats.badges_count ?? '') },
                     ].filter(x => x.val !== '').map(({ label, val }) => (
                       <div key={label} className="bg-[#0f0f1a] rounded-lg px-3 py-2">
                         <div className="text-white font-semibold text-sm">{val}</div>

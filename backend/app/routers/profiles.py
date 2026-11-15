@@ -133,10 +133,9 @@ def delete_profile(
     db.commit()
 
 
-@router.post("/{profile_id}/sync")
-def sync_profile(
+@router.post("/{profile_id}/sync", response_model=ProfileResponse)
+async def sync_profile(
     profile_id: uuid.UUID,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -147,8 +146,10 @@ def sync_profile(
     if not profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
 
-    background_tasks.add_task(sync_service.run_sync_background, str(profile_id))
-    return {"message": "Sync started", "profile_id": str(profile_id)}
+    updated = await sync_service.run_sync(profile.id, db)
+    if not updated:
+        updated = profile
+    return ProfileResponse.model_validate(updated)
 
 
 @router.get("/{profile_id}/sync-history")

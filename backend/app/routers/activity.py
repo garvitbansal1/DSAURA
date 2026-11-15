@@ -42,7 +42,9 @@ def get_dashboard_stats(
     Consolidates verified profile statistics, difficulty splits,
     streak history, and calendar activity heatmap.
     """
-    profiles = db.query(CodingProfile).filter(CodingProfile.user_id == current_user.id).all()
+    import uuid
+    uid = current_user.id if isinstance(current_user.id, uuid.UUID) else uuid.UUID(str(current_user.id))
+    profiles = db.query(CodingProfile).filter(CodingProfile.user_id == uid).all()
 
     total_solved = 0
     easy_solved = 0
@@ -77,7 +79,7 @@ def get_dashboard_stats(
     if total_solved == 0:
         from app.models.user_problem_history import UserProblemHistory, ProblemStatus
         history_solved = db.query(UserProblemHistory).filter(
-            (UserProblemHistory.user_id == current_user.id) | (UserProblemHistory.user_id == str(current_user.id)),
+            UserProblemHistory.user_id == uid,
             UserProblemHistory.status == ProblemStatus.solved
         ).count()
         if history_solved > 0:

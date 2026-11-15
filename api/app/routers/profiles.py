@@ -30,6 +30,7 @@ def rehydrate_profiles(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    uid = current_user.id if isinstance(current_user.id, uuid.UUID) else uuid.UUID(str(current_user.id))
     results = []
     for item in payload:
         try:
@@ -38,7 +39,7 @@ def rehydrate_profiles(
             continue
 
         existing = db.query(CodingProfile).filter(
-            (CodingProfile.user_id == current_user.id) | (CodingProfile.user_id == str(current_user.id)),
+            CodingProfile.user_id == uid,
             CodingProfile.platform == plat,
             CodingProfile.username == item.username
         ).first()
@@ -46,7 +47,7 @@ def rehydrate_profiles(
         if not existing:
             existing = CodingProfile(
                 id=uuid.uuid4(),
-                user_id=current_user.id,
+                user_id=uid,
                 platform=plat,
                 username=item.username,
                 profile_url=item.profile_url,
@@ -70,7 +71,7 @@ def rehydrate_profiles(
 
     try:
         from app.routers.mastery import ensure_user_problem_history
-        ensure_user_problem_history(current_user.id, db)
+        ensure_user_problem_history(uid, db)
     except Exception:
         pass
 
@@ -83,9 +84,8 @@ def get_profiles(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    profiles = db.query(CodingProfile).filter(
-        (CodingProfile.user_id == current_user.id) | (CodingProfile.user_id == str(current_user.id))
-    ).all()
+    uid = current_user.id if isinstance(current_user.id, uuid.UUID) else uuid.UUID(str(current_user.id))
+    profiles = db.query(CodingProfile).filter(CodingProfile.user_id == uid).all()
     return [ProfileResponse.model_validate(p) for p in profiles]
 
 

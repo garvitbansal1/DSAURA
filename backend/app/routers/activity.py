@@ -73,14 +73,27 @@ def get_dashboard_stats(
             acceptance_rate = float(raw.get("acceptance_rate") or 62.4)
         total_submissions += int(raw.get("total_submissions", p_solved * 2) or p_solved * 2)
 
-    # Fallback realistic counts if fresh account
+    # If no profile-level stats found in DB, check UserProblemHistory
     if total_solved == 0:
-        easy_solved = 12
-        medium_solved = 18
-        hard_solved = 4
-        total_solved = easy_solved + medium_solved + hard_solved
-        streak = 5
-        total_submissions = 76
+        from app.models.user_problem_history import UserProblemHistory, ProblemStatus
+        history_solved = db.query(UserProblemHistory).filter(
+            (UserProblemHistory.user_id == current_user.id) | (UserProblemHistory.user_id == str(current_user.id)),
+            UserProblemHistory.status == ProblemStatus.solved
+        ).count()
+        if history_solved > 0:
+            total_solved = history_solved
+            easy_solved = int(history_solved * 0.45)
+            medium_solved = int(history_solved * 0.42)
+            hard_solved = history_solved - easy_solved - medium_solved
+            streak = 3
+            total_submissions = history_solved * 2
+        else:
+            easy_solved = 0
+            medium_solved = 0
+            hard_solved = 0
+            total_solved = 0
+            streak = 0
+            total_submissions = 0
 
     difficulty_dist = [
         {"name": "Easy", "value": easy_solved, "color": "#10b981"},

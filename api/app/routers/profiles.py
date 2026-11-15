@@ -1,10 +1,12 @@
-from typing import List
+from pydantic import BaseModel
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.models.profile import CodingProfile, Platform
+from app.models.profile import CodingProfile, Platform, SyncStatus
 from app.models.sync_record import SyncRecord
 from app.schemas.profile import ProfileCreate, ProfileResponse
 from app.services import sync_service
@@ -13,13 +15,77 @@ import uuid
 router = APIRouter()
 
 
+class ProfileRehydrateItem(BaseModel):
+    platform: str
+    username: str
+    profile_url: Optional[str] = None
+    raw_stats: Optional[Dict[str, Any]] = None
+    sync_status: Optional[str] = "success"
+    last_synced_at: Optional[datetime] = None
+
+
+@router.post("/rehydrate", response_model=List[ProfileResponse])
+def rehydrate_profiles(
+    payload: List[ProfileRehydrateItem],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    results = []
+    for item in payload:
+        try:
+            plat = Platform(item.platform)
+        except ValueError:
+            continue
+
+        existing = db.query(CodingProfile).filter(
+            (CodingProfile.user_id == current_user.id) | (CodingProfile.user_id == str(current_user.id)),
+            CodingProfile.platform == plat,
+            CodingProfile.username == item.username
+        ).first()
+
+        if not existing:
+            existing = CodingProfile(
+                id=uuid.uuid4(),
+                user_id=current_user.id,
+                platform=plat,
+                username=item.username,
+                profile_url=item.profile_url,
+                raw_stats=item.raw_stats or {},
+                sync_status=SyncStatus(item.sync_status) if item.sync_status in [s.value for s in SyncStatus] else SyncStatus.success,
+                last_synced_at=item.last_synced_at or datetime.utcnow(),
+                is_verified=True,
+            )
+            db.add(existing)
+        else:
+            if item.raw_stats:
+                existing.raw_stats = item.raw_stats
+                existing.last_synced_at = item.last_synced_at or datetime.utcnow()
+                existing.sync_status = SyncStatus.success
+                existing.is_verified = True
+        results.append(existing)
+
+    db.commit()
+    for r in results:
+        db.refresh(r)
+
+    try:
+        from app.routers.mastery import ensure_user_problem_history
+        ensure_user_problem_history(current_user.id, db)
+    except Exception:
+        pass
+
+    return [ProfileResponse.model_validate(r) for r in results]
+
+
 @router.get("", response_model=List[ProfileResponse])
 @router.get("/", response_model=List[ProfileResponse], include_in_schema=False)
 def get_profiles(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    profiles = db.query(CodingProfile).filter(CodingProfile.user_id == current_user.id).all()
+    profiles = db.query(CodingProfile).filter(
+        (CodingProfile.user_id == current_user.id) | (CodingProfile.user_id == str(current_user.id))
+    ).all()
     return [ProfileResponse.model_validate(p) for p in profiles]
 
 

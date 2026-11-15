@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, RefreshCw, Trash2, ExternalLink, Loader2, AlertCircle, Layers, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../store/authStore';
 import { profilesAPI } from '../api/profiles';
 import type { CodingProfile, ProfileCreate } from '../types/profile';
 
@@ -35,6 +36,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function Profiles() {
+  const user = useAuthStore((s) => s.user);
+  const cacheKey = `dsaura_profiles_${user?.id || 'default'}`;
+
   const [profiles, setProfiles] = useState<CodingProfile[]>([]);
   const [crossStats, setCrossStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -44,14 +48,43 @@ export function Profiles() {
   const [form, setForm] = useState<ProfileCreate>({ platform: 'leetcode', username: '', profile_url: '' });
   const [submitting, setSubmitting] = useState(false);
 
+  const updateProfiles = (newProfs: CodingProfile[]) => {
+    setProfiles(newProfs);
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(newProfs));
+    } catch {}
+  };
+
   const loadProfiles = async () => {
     setLoading(true);
     try {
+      const cachedStr = localStorage.getItem(cacheKey);
+      let cached: CodingProfile[] = [];
+      if (cachedStr) {
+        try {
+          cached = JSON.parse(cachedStr);
+          if (cached.length > 0) {
+            setProfiles(cached);
+          }
+        } catch {}
+      }
+
       const [r, cross] = await Promise.all([
-        profilesAPI.list(),
+        profilesAPI.list().catch(() => ({ data: [] })),
         profilesAPI.getCrossPlatformStats().catch(() => ({ data: null })),
       ]);
-      setProfiles(r.data);
+
+      if (r.data && r.data.length > 0) {
+        updateProfiles(r.data);
+      } else if (cached.length > 0) {
+        try {
+          const rehydrated = await profilesAPI.rehydrate(cached);
+          if (rehydrated.data && rehydrated.data.length > 0) {
+            updateProfiles(rehydrated.data);
+          }
+        } catch {}
+      }
+
       setCrossStats(cross.data);
     } catch {
       toast.error('Failed to load profiles');
@@ -60,21 +93,23 @@ export function Profiles() {
     }
   };
 
-  useEffect(() => { loadProfiles(); }, []);
+  useEffect(() => { loadProfiles(); }, [cacheKey]);
 
   const handleConnect = async () => {
     if (!form.username.trim()) { toast.error('Username is required'); return; }
     setSubmitting(true);
     try {
       const { data } = await profilesAPI.create(form);
-      setProfiles((p) => [...p, data]);
+      const nextProfs = [...profiles.filter((p) => p.id !== data.id), data];
+      updateProfiles(nextProfs);
       setShowForm(false);
       setForm({ platform: 'leetcode', username: '', profile_url: '' });
       toast.success(`${form.platform} profile connected! Synchronizing...`);
       try {
         const syncRes = await profilesAPI.sync(data.id);
         if (syncRes.data) {
-          setProfiles((p) => p.map((pr) => pr.id === data.id ? { ...pr, ...syncRes.data } : pr));
+          const syncedList = nextProfs.map((pr) => pr.id === data.id ? { ...pr, ...syncRes.data } : pr);
+          updateProfiles(syncedList);
         }
         await loadProfiles();
         toast.success(`${form.platform} profile synchronized!`);
@@ -93,7 +128,8 @@ export function Profiles() {
     try {
       const syncRes = await profilesAPI.sync(id);
       if (syncRes.data) {
-        setProfiles((p) => p.map((pr) => pr.id === id ? { ...pr, ...syncRes.data } : pr));
+        const updated = profiles.map((pr) => pr.id === id ? { ...pr, ...syncRes.data } : pr);
+        updateProfiles(updated);
       }
       await loadProfiles();
       toast.success('Profile synced successfully!');
@@ -109,7 +145,8 @@ export function Profiles() {
     setDeleting(id);
     try {
       await profilesAPI.delete(id);
-      setProfiles((p) => p.filter((pr) => pr.id !== id));
+      const filtered = profiles.filter((pr) => pr.id !== id);
+      updateProfiles(filtered);
       toast.success('Profile removed');
     } catch {
       toast.error('Failed to remove profile');

@@ -29,6 +29,20 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc: Exception):
+    import traceback
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": str(exc),
+            "traceback": traceback.format_exc(),
+            "error_type": exc.__class__.__name__
+        }
+    )
+
+
 @app.middleware("http")
 async def fix_vercel_path(request, call_next):
     raw_target = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri")
@@ -82,7 +96,7 @@ def init_db():
         from app.routers.mastery import ensure_user_problem_history
         import uuid
 
-        DEFAULT_TEST_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+        DEFAULT_TEST_USER_ID = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
         Base.metadata.create_all(bind=engine)
         db = SessionLocal()
         try:
